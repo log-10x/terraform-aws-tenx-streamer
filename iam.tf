@@ -70,10 +70,10 @@ resource "aws_iam_role_policy" "tenx_streamer" {
           Sid    = "S3IndexBucketObjectAccess"
           Effect = "Allow"
           Action = [
-            "s3:GetObject",           # Read existing index files
-            "s3:PutObject",           # Write new index files
-            "s3:PutObjectTagging",    # Tag objects with metadata
-            "s3:DeleteObject"         # Remove obsolete index files
+            "s3:GetObject",        # Read existing index files
+            "s3:PutObject",        # Write new index files
+            "s3:PutObjectTagging", # Tag objects with metadata
+            "s3:DeleteObject"      # Remove obsolete index files
           ]
           Resource = [
             "arn:aws:s3:::${module.tenx_streamer_infra.index_results_bucket_name}/*"
@@ -87,10 +87,10 @@ resource "aws_iam_role_policy" "tenx_streamer" {
           Sid    = "SQSQueueAccess"
           Effect = "Allow"
           Action = [
-            "sqs:ReceiveMessage",     # Poll for messages
-            "sqs:DeleteMessage",      # Remove processed messages
-            "sqs:SendMessage",        # Send messages (for pipeline invocation)
-            "sqs:GetQueueAttributes"  # Get queue metadata
+            "sqs:ReceiveMessage",    # Poll for messages
+            "sqs:DeleteMessage",     # Remove processed messages
+            "sqs:SendMessage",       # Send messages (for pipeline invocation)
+            "sqs:GetQueueAttributes" # Get queue metadata
           ]
           Resource = [
             "arn:aws:sqs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:${local.index_queue_name}",
@@ -102,10 +102,10 @@ resource "aws_iam_role_policy" "tenx_streamer" {
       # Additional custom policies provided by user
       [
         for policy in var.additional_iam_policies : {
-          Sid       = try(policy.sid, null)
-          Effect    = policy.effect
-          Action    = policy.actions
-          Resource  = policy.resources
+          Sid      = try(policy.sid, null)
+          Effect   = policy.effect
+          Action   = policy.actions
+          Resource = policy.resources
         }
       ]
     )
