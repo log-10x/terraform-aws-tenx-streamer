@@ -1,5 +1,16 @@
 # Local variables for resource naming and configuration
 locals {
+  # Merge tags with module defaults
+  tags = merge(
+    var.tags,
+    {
+      terraform-module         = "tenx-streamer"
+      terraform-module-version = "v0.2.0"
+      managed-by               = "terraform"
+      eks-cluster              = var.eks_cluster_name
+    }
+  )
+
   # Use cluster name as prefix for generated resource names
   cluster_prefix = var.eks_cluster_name
 
@@ -42,17 +53,6 @@ locals {
     "${local.cluster_prefix}-tenx-streamer-irsa"
   )
 
-  # Merge tags with module defaults
-  tags = merge(
-    var.tags,
-    {
-      terraform-module         = "tenx-streamer"
-      terraform-module-version = "v0.1.0"
-      managed-by               = "terraform"
-      eks-cluster              = var.eks_cluster_name
-    }
-  )
-
   # OIDC provider for IRSA (IAM Roles for Service Accounts)
   # Extract from EKS cluster and construct ARN for IAM trust policy
   # Format: oidc.eks.{region}.amazonaws.com/id/{CLUSTER_ID} (without https://)
@@ -87,7 +87,7 @@ data "aws_eks_cluster_auth" "target" {
 # Provision infrastructure (SQS queues and S3 buckets)
 module "tenx_streamer_infra" {
   source  = "log-10x/tenx-streamer-infra/aws"
-  version = "~> 0.1"
+  version = "~> 0.2"
 
   tenx_streamer_index_queue_name    = local.index_queue_name
   tenx_streamer_query_queue_name    = local.query_queue_name
