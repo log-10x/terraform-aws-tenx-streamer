@@ -5,7 +5,7 @@ locals {
     var.tags,
     {
       terraform-module         = "tenx-streamer"
-      terraform-module-version = "v0.2.0"
+      terraform-module-version = "v0.2.1"
       managed-by               = "terraform"
       eks-cluster              = var.eks_cluster_name
     }
@@ -87,7 +87,7 @@ data "aws_eks_cluster_auth" "target" {
 # Provision infrastructure (SQS queues and S3 buckets)
 module "tenx_streamer_infra" {
   source  = "log-10x/tenx-streamer-infra/aws"
-  version = "~> 0.2"
+  version = ">= 0.2.1"
 
   tenx_streamer_index_queue_name    = local.index_queue_name
   tenx_streamer_query_queue_name    = local.query_queue_name
