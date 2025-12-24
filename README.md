@@ -29,7 +29,7 @@ EKS Cluster (existing)
     │               └─> Streamer Pods
     │                       │
     │                       ├─> S3 Buckets (source + index)
-    │                       └─> SQS Queues (index + query + pipeline)
+    │                       └─> SQS Queues (index + query + subquery + stream)
 ```
 
 ## Prerequisites
@@ -55,7 +55,7 @@ EKS Cluster (existing)
 ```hcl
 module "tenx_streamer" {
   source  = "log-10x/tenx-streamer/aws"
-  version = "~> 0.1"
+  version = "~> 0.3"
 
   eks_cluster_name = "my-eks-cluster"
   tenx_api_key     = var.tenx_api_key
@@ -69,7 +69,7 @@ This will create all infrastructure (SQS queues and S3 buckets) and deploy the s
 ```hcl
 module "tenx_streamer" {
   source  = "log-10x/tenx-streamer/aws"
-  version = "~> 0.1"
+  version = "~> 0.3"
 
   # Required
   eks_cluster_name = "production-eks-cluster"
@@ -84,7 +84,8 @@ module "tenx_streamer" {
   tenx_streamer_index_results_bucket_name = "my-index-bucket"
   tenx_streamer_index_queue_name          = "prod-index-queue"
   tenx_streamer_query_queue_name          = "prod-query-queue"
-  tenx_streamer_pipeline_queue_name       = "prod-pipeline-queue"
+  tenx_streamer_subquery_queue_name       = "prod-subquery-queue"
+  tenx_streamer_stream_queue_name         = "prod-stream-queue"
 
   # Application configuration
   enable_autoscaling               = true
@@ -142,10 +143,9 @@ The module creates an IAM role with least-privilege permissions based on actual 
 - `s3:ListBucket` - List index files
 - `s3:GetObject` - Read existing index files
 - `s3:PutObject` - Write new index files
-- `s3:PutObjectTagging` - Tag objects with metadata
 - `s3:DeleteObject` - Remove obsolete index files
 
-**SQS Queues (All Three Queues)**:
+**SQS Queues (All Four Queues)**:
 - `sqs:ReceiveMessage` - Poll for messages
 - `sqs:DeleteMessage` - Remove processed messages
 - `sqs:SendMessage` - Send messages (for pipeline invocation)
@@ -168,7 +168,8 @@ The module creates an IAM role with least-privilege permissions based on actual 
 | `tenx_streamer_index_results_bucket_name` | S3 bucket for index results. Uses source bucket if empty. | `string` | `""` |
 | `tenx_streamer_index_queue_name` | Index SQS queue name. Auto-generated if empty. | `string` | `""` |
 | `tenx_streamer_query_queue_name` | Query SQS queue name. Auto-generated if empty. | `string` | `""` |
-| `tenx_streamer_pipeline_queue_name` | Pipeline SQS queue name. Auto-generated if empty. | `string` | `""` |
+| `tenx_streamer_subquery_queue_name` | Sub-query SQS queue name. Auto-generated if empty. | `string` | `""` |
+| `tenx_streamer_stream_queue_name` | Stream SQS queue name. Auto-generated if empty. | `string` | `""` |
 | `create_s3_buckets` | Whether to create S3 buckets or use existing ones | `bool` | `true` |
 | `tenx_streamer_queue_message_retention` | SQS message retention period in seconds | `number` | `345600` (4 days) |
 | `tenx_streamer_index_trigger_suffix` | S3 suffix that triggers indexing (e.g., '.log') | `string` | `""` (all objects) |
@@ -186,7 +187,7 @@ The module creates an IAM role with least-privilege permissions based on actual 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
 | `helm_release_name` | Helm release name | `string` | `"tenx-streamer"` |
-| `helm_chart_version` | Version of the streamer-10x Helm chart | `string` | `"0.1.10"` |
+| `helm_chart_version` | Version of the streamer-10x Helm chart | `string` | `"0.4.0"` |
 | `helm_values_file` | Path to custom Helm values YAML file | `string` | `""` |
 | `helm_values` | Additional Helm values as a map | `any` | `{}` |
 
@@ -222,7 +223,8 @@ The module creates an IAM role with least-privilege permissions based on actual 
 
 - `index_queue_url` - URL of the index SQS queue
 - `query_queue_url` - URL of the query SQS queue
-- `pipeline_queue_url` - URL of the pipeline SQS queue
+- `subquery_queue_url` - URL of the sub-query SQS queue
+- `stream_queue_url` - URL of the stream SQS queue
 - `index_source_bucket_name` - Name of the source S3 bucket
 - `index_results_bucket_name` - Name of the index results S3 bucket
 - `index_write_container` - S3 path for writing index results
@@ -259,7 +261,7 @@ If you already have SQS queues and S3 buckets:
 ```hcl
 module "tenx_streamer" {
   source  = "log-10x/tenx-streamer/aws"
-  version = "~> 0.1"
+  version = "~> 0.3"
 
   eks_cluster_name = "my-eks-cluster"
   tenx_api_key     = var.tenx_api_key
@@ -270,7 +272,8 @@ module "tenx_streamer" {
   tenx_streamer_index_results_bucket_name  = "existing-index-bucket"
   tenx_streamer_index_queue_name           = "existing-index-queue"
   tenx_streamer_query_queue_name           = "existing-query-queue"
-  tenx_streamer_pipeline_queue_name        = "existing-pipeline-queue"
+  tenx_streamer_subquery_queue_name        = "existing-subquery-queue"
+  tenx_streamer_stream_queue_name          = "existing-stream-queue"
 }
 ```
 
@@ -281,7 +284,7 @@ If your application needs additional AWS permissions:
 ```hcl
 module "tenx_streamer" {
   source  = "log-10x/tenx-streamer/aws"
-  version = "~> 0.1"
+  version = "~> 0.3"
 
   eks_cluster_name = "my-eks-cluster"
   tenx_api_key     = var.tenx_api_key
@@ -304,7 +307,7 @@ Merge custom Helm values with generated configuration:
 ```hcl
 module "tenx_streamer" {
   source  = "log-10x/tenx-streamer/aws"
-  version = "~> 0.1"
+  version = "~> 0.3"
 
   eks_cluster_name = "my-eks-cluster"
   tenx_api_key     = var.tenx_api_key
@@ -408,7 +411,8 @@ module "tenx_streamer" {
   service_account_name                   = "tenx-streamer-prod"
   tenx_streamer_index_queue_name         = "prod-index-queue"
   tenx_streamer_query_queue_name         = "prod-query-queue"
-  tenx_streamer_pipeline_queue_name      = "prod-pipeline-queue"
+  tenx_streamer_subquery_queue_name      = "prod-subquery-queue"
+  tenx_streamer_stream_queue_name        = "prod-stream-queue"
 }
 ```
 
@@ -457,7 +461,7 @@ See the [examples/](examples/) directory for complete working examples:
 
 | Name | Source | Version |
 |------|--------|---------|
-| tenx_streamer_infra | log-10x/tenx-streamer-infra/aws | ~> 0.1 |
+| tenx_streamer_infra | log-10x/tenx-streamer-infra/aws | ~> 0.3 |
 
 ## Resources
 
