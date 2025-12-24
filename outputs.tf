@@ -12,9 +12,14 @@ output "query_queue_url" {
   value       = module.tenx_streamer_infra.query_queue_url
 }
 
-output "pipeline_queue_url" {
-  description = "URL of the pipeline SQS queue"
-  value       = module.tenx_streamer_infra.pipeline_queue_url
+output "subquery_queue_url" {
+  description = "URL of the sub-query SQS queue"
+  value       = module.tenx_streamer_infra.subquery_queue_url
+}
+
+output "stream_queue_url" {
+  description = "URL of the stream SQS queue"
+  value       = module.tenx_streamer_infra.stream_queue_url
 }
 
 output "index_source_bucket_name" {
