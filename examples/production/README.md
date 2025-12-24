@@ -2,7 +2,7 @@
 
 This example demonstrates a production-ready deployment with:
 
-- **Separate clusters** for index, query, and pipeline roles
+- **Separate clusters** for index, query, and stream roles
 - **Horizontal pod autoscaling** based on CPU utilization
 - **Resource limits** optimized for each workload type
 - **High availability** configuration with pod anti-affinity
@@ -22,11 +22,11 @@ This example demonstrates a production-ready deployment with:
 - Higher parallelism for concurrent queries
 - Optimized for throughput
 
-### Pipeline Worker Cluster
+### Stream Worker Cluster
 - 5-15 replicas (autoscaled)
 - 2-4 GB memory per pod
 - Spread across availability zones
-- Balanced parallelism for pipeline execution
+- Balanced parallelism for stream execution
 
 ## Prerequisites
 
@@ -59,7 +59,7 @@ All application settings are defined in [`values.yaml`](./values.yaml):
 
 - Cluster roles and scaling policies
 - Resource requests and limits per cluster
-- Pipeline execution limits
+- Stream execution limits
 - Autoscaling thresholds
 - Pod anti-affinity rules
 

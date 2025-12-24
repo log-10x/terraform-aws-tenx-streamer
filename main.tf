@@ -5,7 +5,7 @@ locals {
     var.tags,
     {
       terraform-module         = "tenx-streamer"
-      terraform-module-version = "v0.2.1"
+      terraform-module-version = "v0.3.0"
       managed-by               = "terraform"
       eks-cluster              = var.eks_cluster_name
     }
@@ -36,9 +36,14 @@ locals {
     "${local.cluster_prefix}-tenx-query-queue"
   )
 
-  pipeline_queue_name = coalesce(
-    var.tenx_streamer_pipeline_queue_name,
-    "${local.cluster_prefix}-tenx-pipeline-queue"
+  subquery_queue_name = coalesce(
+    var.tenx_streamer_subquery_queue_name,
+    "${local.cluster_prefix}-tenx-subquery-queue"
+  )
+
+  stream_queue_name = coalesce(
+    var.tenx_streamer_stream_queue_name,
+    "${local.cluster_prefix}-tenx-stream-queue"
   )
 
   # Generate Kubernetes service account name
@@ -87,11 +92,12 @@ data "aws_eks_cluster_auth" "target" {
 # Provision infrastructure (SQS queues and S3 buckets)
 module "tenx_streamer_infra" {
   source  = "log-10x/tenx-streamer-infra/aws"
-  version = ">= 0.2.1"
+  version = ">= 0.3.0"
 
   tenx_streamer_index_queue_name    = local.index_queue_name
   tenx_streamer_query_queue_name    = local.query_queue_name
-  tenx_streamer_pipeline_queue_name = local.pipeline_queue_name
+  tenx_streamer_subquery_queue_name = local.subquery_queue_name
+  tenx_streamer_stream_queue_name   = local.stream_queue_name
 
   tenx_streamer_create_index_source_bucket  = var.create_s3_buckets
   tenx_streamer_index_source_bucket_name    = local.index_source_bucket_name
@@ -221,7 +227,8 @@ resource "helm_release" "tenx_streamer" {
       # SQS queue configuration (root-level values)
       indexQueueUrl    = module.tenx_streamer_infra.index_queue_url
       queryQueueUrl    = module.tenx_streamer_infra.query_queue_url
-      pipelineQueueUrl = module.tenx_streamer_infra.pipeline_queue_url
+      subQueryQueueUrl = module.tenx_streamer_infra.subquery_queue_url
+      streamQueueUrl   = module.tenx_streamer_infra.stream_queue_url
     })]
   )
 

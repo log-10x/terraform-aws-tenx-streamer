@@ -41,8 +41,14 @@ variable "tenx_streamer_query_queue_name" {
   default     = ""
 }
 
-variable "tenx_streamer_pipeline_queue_name" {
-  description = "Name of the pipeline SQS queue. If empty, module will generate a name."
+variable "tenx_streamer_subquery_queue_name" {
+  description = "Name of the sub-query SQS queue. If empty, module will generate a name."
+  type        = string
+  default     = ""
+}
+
+variable "tenx_streamer_stream_queue_name" {
+  description = "Name of the stream SQS queue. If empty, module will generate a name."
   type        = string
   default     = ""
 }
@@ -100,7 +106,7 @@ variable "helm_release_name" {
 variable "helm_chart_version" {
   description = "Version of the streamer-10x Helm chart"
   type        = string
-  default     = "0.3.0"
+  default     = "0.4.0"
 }
 
 variable "helm_values_file" {
