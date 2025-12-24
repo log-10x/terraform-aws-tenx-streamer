@@ -64,16 +64,15 @@ resource "aws_iam_role_policy" "tenx_streamer" {
         }
       ],
       # S3 Index Bucket - Object-level access
-      # Used by: AWSIndexAccess for reading, writing, tagging, and deleting index objects
+      # Used by: AWSIndexAccess for reading, writing, and deleting index objects
       [
         {
           Sid    = "S3IndexBucketObjectAccess"
           Effect = "Allow"
           Action = [
-            "s3:GetObject",        # Read existing index files
-            "s3:PutObject",        # Write new index files
-            "s3:PutObjectTagging", # Tag objects with metadata
-            "s3:DeleteObject"      # Remove obsolete index files
+            "s3:GetObject",   # Read existing index files
+            "s3:PutObject",   # Write new index files
+            "s3:DeleteObject" # Remove obsolete index files
           ]
           Resource = [
             "arn:aws:s3:::${module.tenx_streamer_infra.index_results_bucket_name}/*"
@@ -95,7 +94,8 @@ resource "aws_iam_role_policy" "tenx_streamer" {
           Resource = [
             "arn:aws:sqs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:${local.index_queue_name}",
             "arn:aws:sqs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:${local.query_queue_name}",
-            "arn:aws:sqs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:${local.pipeline_queue_name}"
+            "arn:aws:sqs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:${local.subquery_queue_name}",
+            "arn:aws:sqs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:${local.stream_queue_name}"
           ]
         }
       ],

@@ -4,7 +4,7 @@ This example shows a minimal deployment of the Log10x streamer to an existing EK
 
 ## Architecture
 
-- Single all-in-one cluster handling all roles (index, query, pipeline)
+- Single all-in-one cluster handling all roles (index, query, stream)
 - 1 replica (no autoscaling)
 - Basic resource limits suitable for development
 
@@ -29,7 +29,7 @@ terraform apply
 All application settings are defined in [`values.yaml`](./values.yaml):
 
 - Cluster roles and replica count
-- Pipeline execution limits
+- Stream execution limits
 - Resource requests and limits
 - Readiness thresholds
 
@@ -39,7 +39,7 @@ To customize the deployment, edit `values.yaml` to adjust:
 
 - Number of replicas
 - CPU/memory resources
-- Pipeline execution limits
+- Stream execution limits
 - Health probe settings
 
 See the [streamer-10x chart documentation](https://github.com/log-10x/helm-charts/tree/main/charts/streamer) for all available configuration options.
