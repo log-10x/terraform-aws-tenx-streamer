@@ -1,64 +1,107 @@
 # terraform-aws-tenx-streamer
 
-Terraform module that deploys the Log10x streamer application to an existing EKS cluster with complete AWS integration.
+Terraform module that deploys the Log10x streamer application to Kubernetes with complete AWS integration.
 
 ## Overview
 
-This module provides a complete deployment of the Log10x streamer to AWS EKS, including:
+This module provides a complete deployment of the Log10x streamer, including:
 
 - **Infrastructure Provisioning**: Automatically creates SQS queues and S3 buckets using the `terraform-aws-tenx-streamer-infra` module
 - **IRSA Configuration**: Sets up IAM Roles for Service Accounts for secure, credential-free AWS access
 - **Kubernetes Resources**: Creates namespaces and service accounts with proper annotations
 - **Helm Deployment**: Deploys the `streamer-10x` Helm chart with all necessary configuration
 
+**Version 0.4.0+**: This module now uses explicit provider passing for better control and flexibility. See [Migration Guide](#migration-from-03x-to-04x) if upgrading from v0.3.x.
+
 ## Architecture
 
 ```
-EKS Cluster (existing)
+Parent Terraform Module
     │
-    ├─> OIDC Provider (auto-discovered)
-    │       │
-    │       └─> IAM Role (IRSA)
-    │               │
-    │               └─> IAM Policy (S3 + SQS permissions)
+    ├─> Kubernetes Provider → This Module
+    ├─> Helm Provider → This Module
+    ├─> OIDC Provider Info → This Module
     │
-    ├─> Kubernetes Namespace
-    │       │
-    │       └─> Service Account (with IRSA annotation)
-    │               │
-    │               └─> Streamer Pods
-    │                       │
-    │                       ├─> S3 Buckets (source + index)
-    │                       └─> SQS Queues (index + query + subquery + stream)
+    └─> This Module Creates:
+            │
+            ├─> IAM Role (IRSA)
+            │       │
+            │       └─> IAM Policy (S3 + SQS permissions)
+            │
+            ├─> Kubernetes Namespace
+            │       │
+            │       └─> Service Account (with IRSA annotation)
+            │               │
+            │               └─> Streamer Pods
+            │                       │
+            │                       ├─> S3 Buckets (source + index)
+            │                       └─> SQS Queues (index + query + subquery + stream)
 ```
 
 ## Prerequisites
 
-1. **Existing EKS Cluster** with:
-   - OIDC provider configured (standard for EKS clusters)
+1. **Kubernetes Cluster** with:
    - Kubernetes version 1.21+
    - Sufficient capacity for streamer pods
+   - For EKS: OIDC provider configured (standard for EKS clusters)
 
-2. **AWS CLI** configured with appropriate credentials
+2. **Terraform Providers Configured** in your parent module:
+   - AWS provider >= 5.0
+   - Kubernetes provider >= 2.20 (configured to connect to your cluster)
+   - Helm provider >= 2.9 (configured to connect to your cluster)
 
 3. **Terraform** version 1.0 or higher
 
-4. **Required Providers**:
-   - AWS provider >= 5.0
-   - Kubernetes provider >= 2.20
-   - Helm provider >= 2.9
+4. **For IRSA (EKS)**: OIDC provider ARN and URL from your cluster
 
 ## Quick Start
 
-### Basic Usage
+### Basic Usage (EKS)
 
 ```hcl
+# Configure providers
+provider "aws" {
+  region = "us-east-1"
+}
+
+data "aws_eks_cluster" "main" {
+  name = "my-eks-cluster"
+}
+
+data "aws_eks_cluster_auth" "main" {
+  name = "my-eks-cluster"
+}
+
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.main.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.main.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.main.token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = data.aws_eks_cluster.main.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.main.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.main.token
+  }
+}
+
+# Deploy streamer module
 module "tenx_streamer" {
   source  = "log-10x/tenx-streamer/aws"
-  version = "~> 0.3"
+  version = "~> 0.4"
 
-  eks_cluster_name = "my-eks-cluster"
-  tenx_api_key     = var.tenx_api_key
+  # Required: API key
+  tenx_api_key = var.tenx_api_key
+
+  # Required: OIDC provider info for IRSA
+  oidc_provider_arn = data.aws_eks_cluster.main.identity[0].oidc[0].issuer
+  oidc_provider     = replace(data.aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")
+
+  # Optional: Resource naming prefix (recommended: use cluster name)
+  resource_prefix = "my-eks-cluster"
+
+  # Providers are inherited automatically from parent module
 }
 ```
 
@@ -69,17 +112,21 @@ This will create all infrastructure (SQS queues and S3 buckets) and deploy the s
 ```hcl
 module "tenx_streamer" {
   source  = "log-10x/tenx-streamer/aws"
-  version = "~> 0.3"
+  version = "~> 0.4"
 
   # Required
-  eks_cluster_name = "production-eks-cluster"
-  tenx_api_key     = var.tenx_api_key
+  tenx_api_key      = var.tenx_api_key
+  oidc_provider_arn = data.aws_eks_cluster.main.identity[0].oidc[0].issuer
+  oidc_provider     = replace(data.aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")
+
+  # Resource naming
+  resource_prefix = "production-cluster"
 
   # Kubernetes configuration
   namespace        = "log10x-streamer"
   create_namespace = true
 
-  # Infrastructure naming
+  # Infrastructure naming (optional - uses resource_prefix if not specified)
   tenx_streamer_index_source_bucket_name  = "my-logs-bucket"
   tenx_streamer_index_results_bucket_name = "my-index-bucket"
   tenx_streamer_index_queue_name          = "prod-index-queue"
@@ -87,32 +134,9 @@ module "tenx_streamer" {
   tenx_streamer_subquery_queue_name       = "prod-subquery-queue"
   tenx_streamer_stream_queue_name         = "prod-stream-queue"
 
-  # Application configuration
-  enable_autoscaling               = true
-  autoscaling_min_replicas         = 2
-  autoscaling_max_replicas         = 10
-  autoscaling_target_cpu_percentage = 70
-  max_parallel_requests            = 20
-  max_queued_requests              = 2000
-  readiness_threshold_percent      = 85
-
   # Helm configuration
-  helm_chart_version = "0.1.10"
+  helm_chart_version = "0.6.1"
   helm_values_file   = "streamer-values.yaml"
-  helm_values = {
-    clusters = [{
-      name = "all-in-one"
-      resources = {
-        requests = {
-          cpu    = "1000m"
-          memory = "2Gi"
-        }
-        limits = {
-          memory = "4Gi"
-        }
-      }
-    }]
-  }
 
   # Tagging
   tags = {
@@ -125,9 +149,9 @@ module "tenx_streamer" {
 
 ## IRSA (IAM Roles for Service Accounts)
 
-This module automatically sets up IRSA, which provides secure, credential-free AWS access to Kubernetes pods:
+This module sets up IRSA, which provides secure, credential-free AWS access to Kubernetes pods:
 
-1. **OIDC Auto-Discovery**: Automatically discovers the EKS cluster's OIDC provider
+1. **OIDC Provider**: Uses the OIDC provider information you provide from your EKS cluster
 2. **IAM Role Creation**: Creates an IAM role with a trust policy that allows the Kubernetes service account to assume it
 3. **Service Account Annotation**: Annotates the Kubernetes service account with the IAM role ARN
 4. **Automatic Credential Injection**: EKS automatically injects temporary AWS credentials into pods using this service account
@@ -157,13 +181,15 @@ The module creates an IAM role with least-privilege permissions based on actual 
 
 | Name | Description | Type |
 |------|-------------|------|
-| `eks_cluster_name` | Name of the existing EKS cluster to deploy to | `string` |
 | `tenx_api_key` | Log10x API key for authentication (sensitive) | `string` |
+| `oidc_provider_arn` | ARN of the OIDC provider for IRSA (e.g., `arn:aws:iam::123456789012:oidc-provider/oidc.eks...`) | `string` |
+| `oidc_provider` | OIDC provider URL without `https://` prefix (e.g., `oidc.eks.us-east-1.amazonaws.com/id/...`) | `string` |
 
 ### Infrastructure Configuration
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
+| `resource_prefix` | Prefix for generated resource names. Recommended to use cluster name. | `string` | `"tenx-streamer"` |
 | `tenx_streamer_index_source_bucket_name` | S3 bucket for source files. Auto-generated if empty. | `string` | `""` |
 | `tenx_streamer_index_results_bucket_name` | S3 bucket for index results. Uses source bucket if empty. | `string` | `""` |
 | `tenx_streamer_index_queue_name` | Index SQS queue name. Auto-generated if empty. | `string` | `""` |
@@ -245,13 +271,6 @@ The module creates an IAM role with least-privilege permissions based on actual 
 - `helm_release_status` - Status of the Helm release
 - `helm_release_version` - Version of the deployed Helm chart
 
-### EKS Outputs
-
-- `eks_cluster_name` - Name of the EKS cluster
-- `eks_cluster_endpoint` - Endpoint of the EKS cluster
-- `eks_oidc_provider_arn` - ARN of the EKS OIDC provider
-- `eks_oidc_provider` - OIDC provider URL (without https:// prefix)
-
 ## Advanced Usage
 
 ### Using Existing Infrastructure
@@ -261,10 +280,11 @@ If you already have SQS queues and S3 buckets:
 ```hcl
 module "tenx_streamer" {
   source  = "log-10x/tenx-streamer/aws"
-  version = "~> 0.3"
+  version = "~> 0.4"
 
-  eks_cluster_name = "my-eks-cluster"
-  tenx_api_key     = var.tenx_api_key
+  tenx_api_key      = var.tenx_api_key
+  oidc_provider_arn = var.oidc_provider_arn
+  oidc_provider     = var.oidc_provider
 
   # Use existing infrastructure
   create_s3_buckets                        = false
@@ -284,10 +304,11 @@ If your application needs additional AWS permissions:
 ```hcl
 module "tenx_streamer" {
   source  = "log-10x/tenx-streamer/aws"
-  version = "~> 0.3"
+  version = "~> 0.4"
 
-  eks_cluster_name = "my-eks-cluster"
-  tenx_api_key     = var.tenx_api_key
+  tenx_api_key      = var.tenx_api_key
+  oidc_provider_arn = var.oidc_provider_arn
+  oidc_provider     = var.oidc_provider
 
   additional_iam_policies = [
     {
@@ -302,43 +323,18 @@ module "tenx_streamer" {
 
 ### Custom Helm Values
 
-Merge custom Helm values with generated configuration:
+Use a custom values file for Helm configuration:
 
 ```hcl
 module "tenx_streamer" {
   source  = "log-10x/tenx-streamer/aws"
-  version = "~> 0.3"
+  version = "~> 0.4"
 
-  eks_cluster_name = "my-eks-cluster"
-  tenx_api_key     = var.tenx_api_key
+  tenx_api_key      = var.tenx_api_key
+  oidc_provider_arn = var.oidc_provider_arn
+  oidc_provider     = var.oidc_provider
 
-  helm_values = {
-    clusters = [{
-      name = "all-in-one"
-
-      resources = {
-        requests = {
-          cpu    = "2000m"
-          memory = "4Gi"
-        }
-        limits = {
-          cpu    = "4000m"
-          memory = "8Gi"
-        }
-      }
-
-      nodeSelector = {
-        workload-type = "log-processing"
-      }
-
-      tolerations = [{
-        key      = "log-processing"
-        operator = "Equal"
-        value    = "true"
-        effect   = "NoSchedule"
-      }]
-    }]
-  }
+  helm_values_file = "${path.module}/custom-streamer-values.yaml"
 }
 ```
 
@@ -474,8 +470,62 @@ See the [examples/](examples/) directory for complete working examples:
 | helm_release.tenx_streamer | resource |
 | aws_region.current | data source |
 | aws_caller_identity.current | data source |
-| aws_eks_cluster.target | data source |
-| aws_eks_cluster_auth.target | data source |
+
+## Migration from 0.3.x to 0.4.x
+
+Version 0.4.0 introduces **breaking changes** to improve module design and follow Terraform best practices.
+
+### What Changed
+
+1. **Removed** `eks_cluster_name` variable
+2. **Added** `oidc_provider_arn` and `oidc_provider` variables (required)
+3. **Added** `resource_prefix` variable for resource naming
+4. **Removed** automatic EKS cluster discovery via data sources
+5. **Fixed** provider configuration to use proper inheritance
+
+### Migration Steps
+
+**Before (v0.3.x):**
+```hcl
+module "tenx_streamer" {
+  source  = "log-10x/tenx-streamer/aws"
+  version = "~> 0.3"
+
+  eks_cluster_name = "my-cluster"
+  tenx_api_key     = var.tenx_api_key
+}
+```
+
+**After (v0.4.x):**
+```hcl
+# Add these data sources if not already present
+data "aws_eks_cluster" "main" {
+  name = "my-cluster"
+}
+
+module "tenx_streamer" {
+  source  = "log-10x/tenx-streamer/aws"
+  version = "~> 0.4"
+
+  # Required: API key (unchanged)
+  tenx_api_key = var.tenx_api_key
+
+  # New: OIDC provider info
+  oidc_provider_arn = data.aws_eks_cluster.main.identity[0].oidc[0].issuer
+  oidc_provider     = replace(data.aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")
+
+  # Optional: Use cluster name as prefix for consistent naming
+  resource_prefix = "my-cluster"
+}
+```
+
+### Benefits of Upgrading
+
+- ✅ **Explicit dependencies**: Clearer provider configuration
+- ✅ **More flexible**: Works with any Kubernetes cluster (not just EKS)
+- ✅ **Better control**: Parent module manages all provider configurations
+- ✅ **Follows best practices**: Standard Terraform multi-provider pattern
+- ✅ **No redundant lookups**: More efficient resource management
 
 ## License
 
