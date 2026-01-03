@@ -5,19 +5,18 @@ locals {
     var.tags,
     {
       terraform-module         = "tenx-streamer"
-      terraform-module-version = "v0.3.0"
+      terraform-module-version = "v0.4.0"
       managed-by               = "terraform"
-      eks-cluster              = var.eks_cluster_name
     }
   )
 
-  # Use cluster name as prefix for generated resource names
-  cluster_prefix = var.eks_cluster_name
+  # Use resource prefix for generated resource names
+  resource_prefix = var.resource_prefix
 
   # Generate S3 bucket names with defaults
   index_source_bucket_name = coalesce(
     var.tenx_streamer_index_source_bucket_name,
-    "tenx-streamer-${local.cluster_prefix}-${data.aws_caller_identity.current.account_id}"
+    "${local.resource_prefix}-${data.aws_caller_identity.current.account_id}"
   )
 
   index_results_bucket_name = coalesce(
@@ -28,22 +27,22 @@ locals {
   # Generate SQS queue names with defaults
   index_queue_name = coalesce(
     var.tenx_streamer_index_queue_name,
-    "${local.cluster_prefix}-tenx-index-queue"
+    "${local.resource_prefix}-index-queue"
   )
 
   query_queue_name = coalesce(
     var.tenx_streamer_query_queue_name,
-    "${local.cluster_prefix}-tenx-query-queue"
+    "${local.resource_prefix}-query-queue"
   )
 
   subquery_queue_name = coalesce(
     var.tenx_streamer_subquery_queue_name,
-    "${local.cluster_prefix}-tenx-subquery-queue"
+    "${local.resource_prefix}-subquery-queue"
   )
 
   stream_queue_name = coalesce(
     var.tenx_streamer_stream_queue_name,
-    "${local.cluster_prefix}-tenx-stream-queue"
+    "${local.resource_prefix}-stream-queue"
   )
 
   # Generate Kubernetes service account name
@@ -55,15 +54,13 @@ locals {
   # Generate IAM role name
   iam_role_name = coalesce(
     var.iam_role_name,
-    "${local.cluster_prefix}-tenx-streamer-irsa"
+    "${local.resource_prefix}-irsa"
   )
 
   # OIDC provider for IRSA (IAM Roles for Service Accounts)
-  # Extract from EKS cluster and construct ARN for IAM trust policy
-  # Format: oidc.eks.{region}.amazonaws.com/id/{CLUSTER_ID} (without https://)
-  oidc_provider_url = data.aws_eks_cluster.target.identity[0].oidc[0].issuer
-  oidc_provider     = replace(local.oidc_provider_url, "https://", "")
-  oidc_provider_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${local.oidc_provider}"
+  # Passed in from parent module
+  oidc_provider     = var.oidc_provider
+  oidc_provider_arn = var.oidc_provider_arn
 }
 
 ###########################################
@@ -74,16 +71,6 @@ locals {
 data "aws_region" "current" {}
 
 data "aws_caller_identity" "current" {}
-
-# Lookup existing EKS cluster
-data "aws_eks_cluster" "target" {
-  name = var.eks_cluster_name
-}
-
-# Lookup EKS cluster authentication
-data "aws_eks_cluster_auth" "target" {
-  name = var.eks_cluster_name
-}
 
 ###########################################
 # Infrastructure (SQS Queues and S3 Buckets)
@@ -108,30 +95,6 @@ module "tenx_streamer_infra" {
   tenx_streamer_index_trigger_suffix    = var.tenx_streamer_index_trigger_suffix
 
   tenx_streamer_user_supplied_tags = local.tags
-}
-
-###########################################
-# Kubernetes Provider
-###########################################
-
-# Configure Kubernetes provider using AWS CLI for EKS authentication
-provider "kubernetes" {
-  host                   = data.aws_eks_cluster.target.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.target.certificate_authority[0].data)
-
-  # Use AWS CLI exec plugin for dynamic token authentication
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "aws"
-    args = [
-      "eks",
-      "get-token",
-      "--cluster-name",
-      var.eks_cluster_name,
-      "--region",
-      data.aws_region.current.id
-    ]
-  }
 }
 
 ###########################################
@@ -165,32 +128,6 @@ resource "kubernetes_service_account_v1" "tenx_streamer" {
 
   # Ensure the IAM role exists before creating the service account
   depends_on = [aws_iam_role.tenx_streamer]
-}
-
-###########################################
-# Helm Provider
-###########################################
-
-# Configure Helm provider using AWS CLI for EKS authentication
-provider "helm" {
-  kubernetes = {
-    host                   = data.aws_eks_cluster.target.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.target.certificate_authority[0].data)
-
-    # Use AWS CLI exec plugin for dynamic token authentication
-    exec = {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      args = [
-        "eks",
-        "get-token",
-        "--cluster-name",
-        var.eks_cluster_name,
-        "--region",
-        data.aws_region.current.id
-      ]
-    }
-  }
 }
 
 ###########################################

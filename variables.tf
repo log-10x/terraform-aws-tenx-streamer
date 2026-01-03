@@ -2,20 +2,31 @@
 # Required Variables
 ###########################################
 
-variable "eks_cluster_name" {
-  description = "Name of the existing EKS cluster to deploy to"
-  type        = string
-}
-
 variable "tenx_api_key" {
   description = "Log10x API key for authentication"
   type        = string
   sensitive   = true
 }
 
+variable "oidc_provider_arn" {
+  description = "ARN of the OIDC provider for the EKS cluster (required for IRSA). Example: arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLED539D4633E53DE1B71EXAMPLE"
+  type        = string
+}
+
+variable "oidc_provider" {
+  description = "OIDC provider URL without https:// prefix (required for IRSA). Example: oidc.eks.us-east-1.amazonaws.com/id/EXAMPLED539D4633E53DE1B71EXAMPLE"
+  type        = string
+}
+
 ###########################################
 # Infrastructure Configuration
 ###########################################
+
+variable "resource_prefix" {
+  description = "Prefix for generated resource names (S3 buckets, SQS queues, IAM roles). Recommended to use cluster name or environment identifier."
+  type        = string
+  default     = "tenx-streamer"
+}
 
 variable "tenx_streamer_index_source_bucket_name" {
   description = "Name of S3 bucket for source files to be indexed. If empty, module will generate a name."
@@ -120,7 +131,7 @@ variable "helm_values_file" {
 ###########################################
 
 variable "iam_role_name" {
-  description = "Name of the IAM role for IRSA (defaults to '{cluster}-tenx-streamer-irsa' if empty)"
+  description = "Name of the IAM role for IRSA (defaults to '{resource_prefix}-irsa' if empty)"
   type        = string
   default     = ""
 }
