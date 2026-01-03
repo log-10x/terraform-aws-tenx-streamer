@@ -84,26 +84,3 @@ output "helm_release_version" {
   value       = helm_release.tenx_streamer.version
 }
 
-###########################################
-# EKS Cluster Outputs
-###########################################
-
-output "eks_cluster_name" {
-  description = "Name of the EKS cluster"
-  value       = data.aws_eks_cluster.target.name
-}
-
-output "eks_cluster_endpoint" {
-  description = "Endpoint of the EKS cluster"
-  value       = data.aws_eks_cluster.target.endpoint
-}
-
-output "eks_oidc_provider_arn" {
-  description = "ARN of the EKS OIDC provider"
-  value       = local.oidc_provider_arn
-}
-
-output "eks_oidc_provider" {
-  description = "OIDC provider URL (without https:// prefix)"
-  value       = local.oidc_provider
-}
