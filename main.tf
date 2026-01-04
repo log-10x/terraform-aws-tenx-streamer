@@ -5,7 +5,7 @@ locals {
     var.tags,
     {
       terraform-module         = "tenx-streamer"
-      terraform-module-version = "v0.4.0"
+      terraform-module-version = "v0.4.1"
       managed-by               = "terraform"
     }
   )
@@ -81,18 +81,29 @@ module "tenx_streamer_infra" {
   source  = "log-10x/tenx-streamer-infra/aws"
   version = ">= 0.3.0"
 
+  # SQS Queue names
   tenx_streamer_index_queue_name    = local.index_queue_name
   tenx_streamer_query_queue_name    = local.query_queue_name
   tenx_streamer_subquery_queue_name = local.subquery_queue_name
   tenx_streamer_stream_queue_name   = local.stream_queue_name
 
+  # SQS Queue configuration
+  tenx_streamer_queue_message_retention  = var.tenx_streamer_queue_message_retention
+  tenx_streamer_queue_visibility_timeout = var.tenx_streamer_queue_visibility_timeout
+  tenx_streamer_queue_max_message_size   = var.tenx_streamer_queue_max_message_size
+  tenx_streamer_queue_delay_seconds      = var.tenx_streamer_queue_delay_seconds
+  tenx_streamer_queue_receive_wait_time  = var.tenx_streamer_queue_receive_wait_time
+
+  # S3 Bucket configuration
   tenx_streamer_create_index_source_bucket  = var.create_s3_buckets
   tenx_streamer_index_source_bucket_name    = local.index_source_bucket_name
   tenx_streamer_create_index_results_bucket = var.create_s3_buckets
   tenx_streamer_index_results_bucket_name   = local.index_results_bucket_name
+  tenx_streamer_index_results_path          = var.tenx_streamer_index_results_path
 
-  tenx_streamer_queue_message_retention = var.tenx_streamer_queue_message_retention
-  tenx_streamer_index_trigger_suffix    = var.tenx_streamer_index_trigger_suffix
+  # S3 trigger configuration
+  tenx_streamer_index_trigger_prefix = var.tenx_streamer_index_trigger_prefix
+  tenx_streamer_index_trigger_suffix = var.tenx_streamer_index_trigger_suffix
 
   tenx_streamer_user_supplied_tags = local.tags
 }

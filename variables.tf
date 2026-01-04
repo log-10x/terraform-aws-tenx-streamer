@@ -76,6 +76,42 @@ variable "tenx_streamer_queue_message_retention" {
   default     = 345600
 }
 
+variable "tenx_streamer_queue_visibility_timeout" {
+  description = "Visibility timeout for SQS queues in seconds (default: 30)"
+  type        = number
+  default     = 30
+}
+
+variable "tenx_streamer_queue_max_message_size" {
+  description = "Maximum message size for SQS queues in bytes (default: 256 KB)"
+  type        = number
+  default     = 262144
+}
+
+variable "tenx_streamer_queue_delay_seconds" {
+  description = "Delivery delay for SQS queues in seconds (default: 0)"
+  type        = number
+  default     = 0
+}
+
+variable "tenx_streamer_queue_receive_wait_time" {
+  description = "Receive wait time for SQS queues in seconds for long polling (default: 20)"
+  type        = number
+  default     = 20
+}
+
+variable "tenx_streamer_index_results_path" {
+  description = "Path within the results bucket where indexing results will be stored (default: 'indexing-results/')"
+  type        = string
+  default     = "indexing-results/"
+}
+
+variable "tenx_streamer_index_trigger_prefix" {
+  description = "S3 object prefix that triggers indexing (e.g., 'app/'). If empty, uses default 'app/'."
+  type        = string
+  default     = "app/"
+}
+
 variable "tenx_streamer_index_trigger_suffix" {
   description = "S3 object suffix that triggers indexing (e.g., '.log'). If empty, all objects trigger indexing."
   type        = string
