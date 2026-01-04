@@ -72,13 +72,13 @@ resource "aws_iam_role_policy" "tenx_streamer" {
           Sid    = "S3IndexBucketObjectAccess"
           Effect = "Allow"
           Action = [
-            "s3:GetObject",         # Read existing index files
-            "s3:GetObjectTagging",  # Read object tags
-            "s3:GetObjectAcl",      # Read object ACLs
-            "s3:PutObject",         # Write new index files
-            "s3:PutObjectTagging",  # Write object tags
-            "s3:PutObjectAcl",      # Write object ACLs
-            "s3:DeleteObject"       # Remove obsolete index files
+            "s3:GetObject",        # Read existing index files
+            "s3:GetObjectTagging", # Read object tags
+            "s3:GetObjectAcl",     # Read object ACLs
+            "s3:PutObject",        # Write new index files
+            "s3:PutObjectTagging", # Write object tags
+            "s3:PutObjectAcl",     # Write object ACLs
+            "s3:DeleteObject"      # Remove obsolete index files
           ]
           Resource = [
             "arn:aws:s3:::${module.tenx_streamer_infra.index_results_bucket_name}/*"
