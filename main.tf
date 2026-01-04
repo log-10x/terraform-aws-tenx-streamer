@@ -5,7 +5,7 @@ locals {
     var.tags,
     {
       terraform-module         = "tenx-streamer"
-      terraform-module-version = "v0.4.1"
+      terraform-module-version = "v0.4.2"
       managed-by               = "terraform"
     }
   )
