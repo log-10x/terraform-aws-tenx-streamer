@@ -153,7 +153,7 @@ variable "helm_release_name" {
 variable "helm_chart_version" {
   description = "Version of the streamer-10x Helm chart"
   type        = string
-  default     = "0.4.0"
+  default     = "0.7.9"
 }
 
 variable "helm_values_file" {
