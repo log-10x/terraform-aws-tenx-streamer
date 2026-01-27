@@ -5,7 +5,7 @@ locals {
     var.tags,
     {
       terraform-module         = "tenx-streamer"
-      terraform-module-version = "v0.5.1"
+      terraform-module-version = "v0.5.2"
       managed-by               = "terraform"
     }
   )
@@ -79,7 +79,7 @@ data "aws_caller_identity" "current" {}
 # Provision infrastructure (SQS queues and S3 buckets)
 module "tenx_streamer_infra" {
   source  = "log-10x/tenx-streamer-infra/aws"
-  version = ">= 0.3.1"
+  version = ">= 0.3.2"
 
   # SQS Queue names
   tenx_streamer_index_queue_name    = local.index_queue_name
