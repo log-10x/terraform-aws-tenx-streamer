@@ -1,5 +1,5 @@
 # Local Testing with LocalStack
-# Deploys Cloud Streamer to minikube using LocalStack for S3/SQS emulation.
+# Deploys Storage Streamer to minikube using LocalStack for S3/SQS emulation.
 # No AWS account required.
 #
 # Prerequisites:
@@ -83,6 +83,12 @@ variable "resource_prefix" {
   default     = "streamer"
 }
 
+variable "local_config_path" {
+  description = "Path to a local config directory mounted into minikube (e.g. /mnt/tenx-config). When set, overrides the built-in /etc/tenx/config in streamer pods. Use with: minikube mount <host-path>:<this-path>"
+  type        = string
+  default     = ""
+}
+
 locals {
   localstack_external = "http://localhost:4566"
   localstack_internal = "http://localstack.localstack.svc.cluster.local:4566"
@@ -144,28 +150,48 @@ resource "helm_release" "streamer" {
     subQueryQueueUrl = replace(module.streamer_infra.subquery_queue_url, local.localstack_external, local.localstack_internal)
     streamQueueUrl   = replace(module.streamer_infra.stream_queue_url, local.localstack_external, local.localstack_internal)
 
-    clusters = [{
-      name                = "all-in-one"
-      roles               = ["index", "query", "stream"]
-      replicaCount        = 1
-      maxParallelRequests = 5
-      maxQueuedRequests   = 100
+    clusters = [merge(
+      {
+        name                = "all-in-one"
+        roles               = ["index", "query", "stream"]
+        replicaCount        = 1
+        maxParallelRequests = 5
+        maxQueuedRequests   = 100
 
-      extraEnv = [
-        { name = "AWS_ENDPOINT_URL", value = local.localstack_internal },
-        { name = "AWS_ACCESS_KEY_ID", value = "test" },
-        { name = "AWS_SECRET_ACCESS_KEY", value = "test" },
-        { name = "AWS_REGION", value = "us-east-1" },
-        { name = "TENX_S3_PATH_STYLE", value = "true" },
-        { name = "TENX_INVOKE_PIPELINE_SCAN_ENDPOINT", value = replace(module.streamer_infra.subquery_queue_url, local.localstack_external, local.localstack_internal) },
-        { name = "TENX_INVOKE_PIPELINE_STREAM_ENDPOINT", value = replace(module.streamer_infra.stream_queue_url, local.localstack_external, local.localstack_internal) },
-      ]
+        extraEnv = [
+          { name = "AWS_ENDPOINT_URL", value = local.localstack_internal },
+          { name = "AWS_ACCESS_KEY_ID", value = "test" },
+          { name = "AWS_SECRET_ACCESS_KEY", value = "test" },
+          { name = "AWS_REGION", value = "us-east-1" },
+          { name = "TENX_S3_PATH_STYLE", value = "true" },
+          { name = "TENX_INVOKE_PIPELINE_SCAN_ENDPOINT", value = replace(module.streamer_infra.subquery_queue_url, local.localstack_external, local.localstack_internal) },
+          { name = "TENX_INVOKE_PIPELINE_STREAM_ENDPOINT", value = replace(module.streamer_infra.stream_queue_url, local.localstack_external, local.localstack_internal) },
+        ]
 
-      resources = {
-        requests = { cpu = "500m", memory = "1Gi" }
-        limits   = { cpu = "1000m", memory = "2Gi" }
+        resources = {
+          requests = { cpu = "500m", memory = "1Gi" }
+          limits   = { cpu = "1000m", memory = "2Gi" }
+        }
+      },
+      # When local_config_path is set, mount it over /etc/tenx/config
+      var.local_config_path != "" ? {
+        extraVolumes = [{
+          name = "local-config"
+          hostPath = {
+            path = var.local_config_path
+            type = "Directory"
+          }
+        }]
+        extraVolumeMounts = [{
+          name      = "local-config"
+          mountPath = "/etc/tenx/config"
+          readOnly  = true
+        }]
+      } : {
+        extraVolumes      = []
+        extraVolumeMounts = []
       }
-    }]
+    )]
 
     fluentBit = {
       output = { type = "stdout" }

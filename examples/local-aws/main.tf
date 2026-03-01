@@ -1,5 +1,5 @@
 # Local Testing with Real AWS
-# Deploys Cloud Streamer to minikube using real AWS S3/SQS.
+# Deploys Storage Streamer to minikube using real AWS S3/SQS.
 # Requires AWS credentials with permissions for S3 and SQS.
 #
 # Prerequisites:
@@ -91,6 +91,12 @@ variable "resource_prefix" {
   default     = "streamer"
 }
 
+variable "local_config_path" {
+  description = "Path to a local config directory mounted into minikube (e.g. /mnt/tenx-config). When set, overrides the built-in /etc/tenx/config in streamer pods. Use with: minikube mount <host-path>:<this-path>"
+  type        = string
+  default     = ""
+}
+
 ###########################################
 # Infrastructure (S3/SQS via real AWS)
 ###########################################
@@ -147,25 +153,45 @@ resource "helm_release" "streamer" {
     subQueryQueueUrl = module.streamer_infra.subquery_queue_url
     streamQueueUrl   = module.streamer_infra.stream_queue_url
 
-    clusters = [{
-      name                = "all-in-one"
-      roles               = ["index", "query", "stream"]
-      replicaCount        = 1
-      maxParallelRequests = 5
-      maxQueuedRequests   = 100
+    clusters = [merge(
+      {
+        name                = "all-in-one"
+        roles               = ["index", "query", "stream"]
+        replicaCount        = 1
+        maxParallelRequests = 5
+        maxQueuedRequests   = 100
 
-      # AWS credentials for pods running in minikube
-      extraEnv = [
-        { name = "AWS_ACCESS_KEY_ID", value = var.aws_access_key_id },
-        { name = "AWS_SECRET_ACCESS_KEY", value = var.aws_secret_access_key },
-        { name = "AWS_REGION", value = var.aws_region },
-      ]
+        # AWS credentials for pods running in minikube
+        extraEnv = [
+          { name = "AWS_ACCESS_KEY_ID", value = var.aws_access_key_id },
+          { name = "AWS_SECRET_ACCESS_KEY", value = var.aws_secret_access_key },
+          { name = "AWS_REGION", value = var.aws_region },
+        ]
 
-      resources = {
-        requests = { cpu = "500m", memory = "1Gi" }
-        limits   = { cpu = "1000m", memory = "2Gi" }
+        resources = {
+          requests = { cpu = "500m", memory = "1Gi" }
+          limits   = { cpu = "1000m", memory = "2Gi" }
+        }
+      },
+      # When local_config_path is set, mount it over /etc/tenx/config
+      var.local_config_path != "" ? {
+        extraVolumes = [{
+          name = "local-config"
+          hostPath = {
+            path = var.local_config_path
+            type = "Directory"
+          }
+        }]
+        extraVolumeMounts = [{
+          name      = "local-config"
+          mountPath = "/etc/tenx/config"
+          readOnly  = true
+        }]
+      } : {
+        extraVolumes      = []
+        extraVolumeMounts = []
       }
-    }]
+    )]
 
     fluentBit = {
       output = { type = "stdout" }
