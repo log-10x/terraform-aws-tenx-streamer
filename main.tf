@@ -5,7 +5,7 @@ locals {
     var.tags,
     {
       terraform-module         = "tenx-streamer"
-      terraform-module-version = "v0.6.0"
+      terraform-module-version = "v0.7.0"
       managed-by               = "terraform"
     }
   )
@@ -57,6 +57,9 @@ locals {
     "${local.resource_prefix}-irsa"
   )
 
+  # CloudWatch Logs log group name (empty = disabled)
+  query_log_group_name = var.tenx_streamer_query_log_group_name
+
   # OIDC provider for IRSA (IAM Roles for Service Accounts)
   # Passed in from parent module
   oidc_provider     = var.oidc_provider
@@ -79,7 +82,7 @@ data "aws_caller_identity" "current" {}
 # Provision infrastructure (SQS queues and S3 buckets)
 module "tenx_streamer_infra" {
   source  = "log-10x/tenx-streamer-infra/aws"
-  version = ">= 0.3.2"
+  version = ">= 0.4.0"
 
   # SQS Queue names
   tenx_streamer_index_queue_name    = local.index_queue_name
@@ -104,6 +107,10 @@ module "tenx_streamer_infra" {
   # S3 trigger configuration
   tenx_streamer_index_trigger_prefix = var.tenx_streamer_index_trigger_prefix
   tenx_streamer_index_trigger_suffix = var.tenx_streamer_index_trigger_suffix
+
+  # CloudWatch Logs configuration
+  tenx_streamer_query_log_group_name      = local.query_log_group_name
+  tenx_streamer_query_log_group_retention = var.tenx_streamer_query_log_group_retention
 
   tenx_streamer_user_supplied_tags = local.tags
 }
@@ -177,6 +184,9 @@ resource "helm_release" "tenx_streamer" {
       queryQueueUrl    = module.tenx_streamer_infra.query_queue_url
       subQueryQueueUrl = module.tenx_streamer_infra.subquery_queue_url
       streamQueueUrl   = module.tenx_streamer_infra.stream_queue_url
+
+      # CloudWatch Logs configuration
+      queryLogGroup = module.tenx_streamer_infra.query_log_group_name
     })]
   )
 

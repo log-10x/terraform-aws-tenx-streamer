@@ -51,6 +51,10 @@ module "tenx_streamer" {
   # Optional: Custom Helm values
   helm_values_file = "${path.module}/values.yaml"
 
+  # CloudWatch Logs for query event logging
+  tenx_streamer_query_log_group_name      = "/tenx/dev/streamer/query"
+  tenx_streamer_query_log_group_retention = 1
+
   # Tags
   tags = {
     Environment = "development"

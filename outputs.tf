@@ -37,6 +37,16 @@ output "index_write_container" {
   value       = module.tenx_streamer_infra.index_write_container
 }
 
+output "query_log_group_name" {
+  description = "Name of the CloudWatch Logs log group for query event logging (empty if disabled)"
+  value       = module.tenx_streamer_infra.query_log_group_name
+}
+
+output "query_log_group_arn" {
+  description = "ARN of the CloudWatch Logs log group for query event logging (empty if disabled)"
+  value       = module.tenx_streamer_infra.query_log_group_arn
+}
+
 ###########################################
 # IAM Outputs
 ###########################################

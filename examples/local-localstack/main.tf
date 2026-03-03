@@ -114,6 +114,10 @@ module "streamer_infra" {
 
   tenx_streamer_index_trigger_prefix = ""
   tenx_streamer_index_trigger_suffix = ".log"
+
+  # Note: CloudWatch Logs (tenx_streamer_query_log_group_name) is not configured here
+  # because LocalStack does not support CloudWatch Logs.
+  # For real AWS deployments, see the local-aws example.
 }
 
 ###########################################
@@ -187,7 +191,7 @@ resource "helm_release" "streamer" {
           mountPath = "/etc/tenx/config"
           readOnly  = true
         }]
-      } : {
+        } : {
         extraVolumes      = []
         extraVolumeMounts = []
       }

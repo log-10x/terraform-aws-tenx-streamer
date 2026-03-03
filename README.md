@@ -10,6 +10,7 @@ This module provides a complete deployment of the Log10x streamer, including:
 - **IRSA Configuration**: Sets up IAM Roles for Service Accounts for secure, credential-free AWS access
 - **Kubernetes Resources**: Creates namespaces and service accounts with proper annotations
 - **Helm Deployment**: Deploys the `streamer-10x` Helm chart with all necessary configuration
+- **CloudWatch Logs**: Optionally creates a log group for query event logging with automatic IAM permissions
 
 **Version 0.4.0+**: This module now uses explicit provider passing for better control and flexibility. See [Migration Guide](#migration-from-03x-to-04x) if upgrading from v0.3.x.
 
@@ -134,8 +135,12 @@ module "tenx_streamer" {
   tenx_streamer_subquery_queue_name       = "prod-subquery-queue"
   tenx_streamer_stream_queue_name         = "prod-stream-queue"
 
+  # CloudWatch Logs for query event logging (optional)
+  tenx_streamer_query_log_group_name      = "/tenx/prod/streamer/query"
+  tenx_streamer_query_log_group_retention = 14
+
   # Helm configuration
-  helm_chart_version = "0.6.1"
+  helm_chart_version = "0.9.4"
   helm_values_file   = "streamer-values.yaml"
 
   # Tagging
@@ -175,6 +180,11 @@ The module creates an IAM role with least-privilege permissions based on actual 
 - `sqs:SendMessage` - Send messages (for pipeline invocation)
 - `sqs:GetQueueAttributes` - Get queue metadata
 
+**CloudWatch Logs (Conditional - only when `tenx_streamer_query_log_group_name` is set)**:
+- `logs:CreateLogStream` - Create log streams for each query/worker
+- `logs:PutLogEvents` - Write query progress and diagnostic events
+- `logs:DescribeLogStreams` - List existing log streams
+
 ## Input Variables
 
 ### Required Variables
@@ -199,6 +209,8 @@ The module creates an IAM role with least-privilege permissions based on actual 
 | `create_s3_buckets` | Whether to create S3 buckets or use existing ones | `bool` | `true` |
 | `tenx_streamer_queue_message_retention` | SQS message retention period in seconds | `number` | `345600` (4 days) |
 | `tenx_streamer_index_trigger_suffix` | S3 suffix that triggers indexing (e.g., '.log') | `string` | `""` (all objects) |
+| `tenx_streamer_query_log_group_name` | CloudWatch Logs log group for query event logging. If empty, disabled. | `string` | `""` |
+| `tenx_streamer_query_log_group_retention` | Days to retain query event logs in CloudWatch Logs | `number` | `7` |
 
 ### Kubernetes Configuration
 
@@ -254,6 +266,8 @@ The module creates an IAM role with least-privilege permissions based on actual 
 - `index_source_bucket_name` - Name of the source S3 bucket
 - `index_results_bucket_name` - Name of the index results S3 bucket
 - `index_write_container` - S3 path for writing index results
+- `query_log_group_name` - Name of the CloudWatch Logs log group for query events (empty if disabled)
+- `query_log_group_arn` - ARN of the CloudWatch Logs log group for query events (empty if disabled)
 
 ### IAM Outputs
 
@@ -312,10 +326,10 @@ module "tenx_streamer" {
 
   additional_iam_policies = [
     {
-      sid       = "CloudWatchLogs"
+      sid       = "SNSNotifications"
       effect    = "Allow"
-      actions   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-      resources = ["arn:aws:logs:*:*:*"]
+      actions   = ["sns:Publish"]
+      resources = ["arn:aws:sns:us-east-1:123456789012:my-topic"]
     }
   ]
 }
