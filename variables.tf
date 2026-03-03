@@ -118,6 +118,18 @@ variable "tenx_streamer_index_trigger_suffix" {
   default     = ""
 }
 
+variable "tenx_streamer_query_log_group_name" {
+  description = "Name of the CloudWatch Logs log group for query event logging. If empty, no log group is created and query event logging is disabled."
+  type        = string
+  default     = ""
+}
+
+variable "tenx_streamer_query_log_group_retention" {
+  description = "Number of days to retain query event logs in CloudWatch Logs (default: 7)"
+  type        = number
+  default     = 7
+}
+
 ###########################################
 # Kubernetes Configuration
 ###########################################
@@ -153,7 +165,7 @@ variable "helm_release_name" {
 variable "helm_chart_version" {
   description = "Version of the streamer-10x Helm chart"
   type        = string
-  default     = "0.9.0"
+  default     = "0.9.4"
 }
 
 variable "helm_values_file" {

@@ -59,6 +59,10 @@ module "tenx_streamer" {
   tenx_streamer_index_source_bucket_name  = var.source_bucket_name
   tenx_streamer_index_results_bucket_name = var.results_bucket_name
 
+  # CloudWatch Logs for query event logging
+  tenx_streamer_query_log_group_name      = "/tenx/prod/streamer/query"
+  tenx_streamer_query_log_group_retention = 14
+
   # Tags
   tags = {
     Environment = "production"

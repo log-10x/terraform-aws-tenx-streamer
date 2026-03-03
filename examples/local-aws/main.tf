@@ -117,6 +117,10 @@ module "streamer_infra" {
 
   tenx_streamer_index_trigger_prefix = ""
   tenx_streamer_index_trigger_suffix = ".log"
+
+  # CloudWatch Logs for query event logging
+  tenx_streamer_query_log_group_name      = "/tenx/${var.resource_prefix}/query"
+  tenx_streamer_query_log_group_retention = 1
 }
 
 ###########################################
@@ -153,6 +157,8 @@ resource "helm_release" "streamer" {
     subQueryQueueUrl = module.streamer_infra.subquery_queue_url
     streamQueueUrl   = module.streamer_infra.stream_queue_url
 
+    queryLogGroup = module.streamer_infra.query_log_group_name
+
     clusters = [merge(
       {
         name                = "all-in-one"
@@ -187,7 +193,7 @@ resource "helm_release" "streamer" {
           mountPath = "/etc/tenx/config"
           readOnly  = true
         }]
-      } : {
+        } : {
         extraVolumes      = []
         extraVolumeMounts = []
       }

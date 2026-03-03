@@ -105,6 +105,24 @@ resource "aws_iam_role_policy" "tenx_streamer" {
           ]
         }
       ],
+      # CloudWatch Logs - Query event logging
+      # Used by: QueryEventLog for writing query progress and diagnostic events
+      # Only granted when a log group is configured
+      local.query_log_group_name != "" ? [
+        {
+          Sid    = "CloudWatchLogsQueryEvents"
+          Effect = "Allow"
+          Action = [
+            "logs:CreateLogStream",
+            "logs:PutLogEvents",
+            "logs:DescribeLogStreams"
+          ]
+          Resource = [
+            module.tenx_streamer_infra.query_log_group_arn,
+            "${module.tenx_streamer_infra.query_log_group_arn}:*"
+          ]
+        }
+      ] : [],
       # Additional custom policies provided by user
       [
         for policy in var.additional_iam_policies : {
