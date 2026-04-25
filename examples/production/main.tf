@@ -35,7 +35,7 @@ provider "helm" {
   }
 }
 
-module "tenx_streamer" {
+module "tenx_retriever" {
   source = "../../"
 
   # Required: API key
@@ -55,18 +55,18 @@ module "tenx_streamer" {
   helm_values_file = "${path.module}/values.yaml"
 
   # Use existing S3 buckets
-  create_s3_buckets                       = false
-  tenx_streamer_index_source_bucket_name  = var.source_bucket_name
-  tenx_streamer_index_results_bucket_name = var.results_bucket_name
+  create_s3_buckets                        = false
+  tenx_retriever_index_source_bucket_name  = var.source_bucket_name
+  tenx_retriever_index_results_bucket_name = var.results_bucket_name
 
   # CloudWatch Logs for query event logging
-  tenx_streamer_query_log_group_name      = "/tenx/prod/streamer/query"
-  tenx_streamer_query_log_group_retention = 14
+  tenx_retriever_query_log_group_name      = "/tenx/prod/retriever/query"
+  tenx_retriever_query_log_group_retention = 14
 
   # Tags
   tags = {
     Environment = "production"
-    Project     = "log10x-streamer"
+    Project     = "log10x-retriever"
     Example     = "production"
     ManagedBy   = "terraform"
   }

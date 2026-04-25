@@ -25,40 +25,40 @@ variable "oidc_provider" {
 variable "resource_prefix" {
   description = "Prefix for generated resource names (S3 buckets, SQS queues, IAM roles). Recommended to use cluster name or environment identifier."
   type        = string
-  default     = "tenx-streamer"
+  default     = "tenx-retriever"
 }
 
-variable "tenx_streamer_index_source_bucket_name" {
+variable "tenx_retriever_index_source_bucket_name" {
   description = "Name of S3 bucket for source files to be indexed. If empty, module will generate a name."
   type        = string
   default     = ""
 }
 
-variable "tenx_streamer_index_results_bucket_name" {
+variable "tenx_retriever_index_results_bucket_name" {
   description = "Name of S3 bucket for indexing results. If empty, uses same as source bucket."
   type        = string
   default     = ""
 }
 
-variable "tenx_streamer_index_queue_name" {
+variable "tenx_retriever_index_queue_name" {
   description = "Name of the index SQS queue. If empty, module will generate a name."
   type        = string
   default     = ""
 }
 
-variable "tenx_streamer_query_queue_name" {
+variable "tenx_retriever_query_queue_name" {
   description = "Name of the query SQS queue. If empty, module will generate a name."
   type        = string
   default     = ""
 }
 
-variable "tenx_streamer_subquery_queue_name" {
+variable "tenx_retriever_subquery_queue_name" {
   description = "Name of the sub-query SQS queue. If empty, module will generate a name."
   type        = string
   default     = ""
 }
 
-variable "tenx_streamer_stream_queue_name" {
+variable "tenx_retriever_stream_queue_name" {
   description = "Name of the stream SQS queue. If empty, module will generate a name."
   type        = string
   default     = ""
@@ -70,61 +70,61 @@ variable "create_s3_buckets" {
   default     = true
 }
 
-variable "tenx_streamer_queue_message_retention" {
+variable "tenx_retriever_queue_message_retention" {
   description = "Message retention period in seconds for SQS queues (default: 4 days)"
   type        = number
   default     = 345600
 }
 
-variable "tenx_streamer_queue_visibility_timeout" {
+variable "tenx_retriever_queue_visibility_timeout" {
   description = "Visibility timeout for SQS queues in seconds (default: 30)"
   type        = number
   default     = 30
 }
 
-variable "tenx_streamer_queue_max_message_size" {
+variable "tenx_retriever_queue_max_message_size" {
   description = "Maximum message size for SQS queues in bytes (default: 256 KB)"
   type        = number
   default     = 262144
 }
 
-variable "tenx_streamer_queue_delay_seconds" {
+variable "tenx_retriever_queue_delay_seconds" {
   description = "Delivery delay for SQS queues in seconds (default: 0)"
   type        = number
   default     = 0
 }
 
-variable "tenx_streamer_queue_receive_wait_time" {
+variable "tenx_retriever_queue_receive_wait_time" {
   description = "Receive wait time for SQS queues in seconds for long polling (default: 20)"
   type        = number
   default     = 20
 }
 
-variable "tenx_streamer_index_results_path" {
+variable "tenx_retriever_index_results_path" {
   description = "Path within the results bucket where indexing results will be stored (default: 'indexing-results/')"
   type        = string
   default     = "indexing-results/"
 }
 
-variable "tenx_streamer_index_trigger_prefix" {
+variable "tenx_retriever_index_trigger_prefix" {
   description = "S3 object prefix that triggers indexing (e.g., 'app/'). If empty, uses default 'app/'."
   type        = string
   default     = "app/"
 }
 
-variable "tenx_streamer_index_trigger_suffix" {
+variable "tenx_retriever_index_trigger_suffix" {
   description = "S3 object suffix that triggers indexing (e.g., '.log'). If empty, all objects trigger indexing."
   type        = string
   default     = ""
 }
 
-variable "tenx_streamer_query_log_group_name" {
+variable "tenx_retriever_query_log_group_name" {
   description = "Name of the CloudWatch Logs log group for query event logging. If empty, no log group is created and query event logging is disabled."
   type        = string
   default     = ""
 }
 
-variable "tenx_streamer_query_log_group_retention" {
+variable "tenx_retriever_query_log_group_retention" {
   description = "Number of days to retain query event logs in CloudWatch Logs (default: 7)"
   type        = number
   default     = 7
@@ -159,11 +159,11 @@ variable "service_account_name" {
 variable "helm_release_name" {
   description = "Helm release name"
   type        = string
-  default     = "tenx-streamer"
+  default     = "tenx-retriever"
 }
 
 variable "helm_chart_version" {
-  description = "Version of the streamer-10x Helm chart"
+  description = "Version of the retriever-10x Helm chart"
   type        = string
   default     = "0.9.4"
 }

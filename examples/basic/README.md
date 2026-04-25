@@ -1,6 +1,6 @@
 # Basic Example
 
-This example shows a minimal deployment of the Log10x streamer to an existing EKS cluster.
+This example shows a minimal deployment of the Log10x retriever to an existing EKS cluster.
 
 ## Architecture
 
@@ -42,4 +42,4 @@ To customize the deployment, edit `values.yaml` to adjust:
 - Stream execution limits
 - Health probe settings
 
-See the [streamer-10x chart documentation](https://github.com/log-10x/helm-charts/tree/main/charts/streamer) for all available configuration options.
+See the [retriever-10x chart documentation](https://github.com/log-10x/helm-charts/tree/main/charts/retriever) for all available configuration options.

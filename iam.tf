@@ -1,6 +1,6 @@
 # IAM Role for Service Account (IRSA)
 # This role allows Kubernetes service accounts to assume AWS permissions
-resource "aws_iam_role" "tenx_streamer" {
+resource "aws_iam_role" "tenx_retriever" {
   name = local.iam_role_name
 
   assume_role_policy = jsonencode({
@@ -28,9 +28,9 @@ resource "aws_iam_role" "tenx_streamer" {
 # IAM Policy with S3 and SQS permissions
 # Permissions are based on actual AWS operations performed by the application
 # (analyzed from AWSIndexAccess.java and SqsConsumer.java)
-resource "aws_iam_role_policy" "tenx_streamer" {
-  role = aws_iam_role.tenx_streamer.id
-  name = "tenx-streamer-permissions"
+resource "aws_iam_role_policy" "tenx_retriever" {
+  role = aws_iam_role.tenx_retriever.id
+  name = "tenx-retriever-permissions"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -47,7 +47,7 @@ resource "aws_iam_role_policy" "tenx_streamer" {
             "s3:GetObjectAcl"
           ]
           Resource = [
-            "arn:aws:s3:::${module.tenx_streamer_infra.index_source_bucket_name}/*"
+            "arn:aws:s3:::${module.tenx_retriever_infra.index_source_bucket_name}/*"
           ]
         }
       ],
@@ -61,7 +61,7 @@ resource "aws_iam_role_policy" "tenx_streamer" {
             "s3:ListBucket"
           ]
           Resource = [
-            "arn:aws:s3:::${module.tenx_streamer_infra.index_results_bucket_name}"
+            "arn:aws:s3:::${module.tenx_retriever_infra.index_results_bucket_name}"
           ]
         }
       ],
@@ -81,7 +81,7 @@ resource "aws_iam_role_policy" "tenx_streamer" {
             "s3:DeleteObject"      # Remove obsolete index files
           ]
           Resource = [
-            "arn:aws:s3:::${module.tenx_streamer_infra.index_results_bucket_name}/*"
+            "arn:aws:s3:::${module.tenx_retriever_infra.index_results_bucket_name}/*"
           ]
         }
       ],
@@ -118,8 +118,8 @@ resource "aws_iam_role_policy" "tenx_streamer" {
             "logs:DescribeLogStreams"
           ]
           Resource = [
-            module.tenx_streamer_infra.query_log_group_arn,
-            "${module.tenx_streamer_infra.query_log_group_arn}:*"
+            module.tenx_retriever_infra.query_log_group_arn,
+            "${module.tenx_retriever_infra.query_log_group_arn}:*"
           ]
         }
       ] : [],

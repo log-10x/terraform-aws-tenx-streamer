@@ -12,7 +12,7 @@ variable "tenx_api_key" {
 variable "namespace" {
   description = "Kubernetes namespace for the deployment"
   type        = string
-  default     = "tenx-streamer"
+  default     = "tenx-retriever"
 }
 
 variable "source_bucket_name" {

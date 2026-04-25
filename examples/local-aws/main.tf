@@ -1,5 +1,5 @@
 # Local Testing with Real AWS
-# Deploys Storage Streamer to minikube using real AWS S3/SQS.
+# Deploys Retriever to minikube using real AWS S3/SQS.
 # Requires AWS credentials with permissions for S3 and SQS.
 #
 # Prerequisites:
@@ -80,19 +80,19 @@ variable "aws_region" {
 }
 
 variable "namespace" {
-  description = "Kubernetes namespace for streamer"
+  description = "Kubernetes namespace for retriever"
   type        = string
-  default     = "log10x-streamer"
+  default     = "log10x-retriever"
 }
 
 variable "resource_prefix" {
   description = "Prefix for resource names"
   type        = string
-  default     = "streamer"
+  default     = "retriever"
 }
 
 variable "local_config_path" {
-  description = "Path to a local config directory mounted into minikube (e.g. /mnt/tenx-config). When set, overrides the built-in /etc/tenx/config in streamer pods. Use with: minikube mount <host-path>:<this-path>"
+  description = "Path to a local config directory mounted into minikube (e.g. /mnt/tenx-config). When set, overrides the built-in /etc/tenx/config in retriever pods. Use with: minikube mount <host-path>:<this-path>"
   type        = string
   default     = ""
 }
@@ -101,33 +101,33 @@ variable "local_config_path" {
 # Infrastructure (S3/SQS via real AWS)
 ###########################################
 
-module "streamer_infra" {
-  source = "log-10x/tenx-streamer-infra/aws"
+module "retriever_infra" {
+  source = "log-10x/tenx-retriever-infra/aws"
 
-  tenx_streamer_index_queue_name    = "${var.resource_prefix}-index-queue"
-  tenx_streamer_query_queue_name    = "${var.resource_prefix}-query-queue"
-  tenx_streamer_subquery_queue_name = "${var.resource_prefix}-subquery-queue"
-  tenx_streamer_stream_queue_name   = "${var.resource_prefix}-stream-queue"
+  tenx_retriever_index_queue_name    = "${var.resource_prefix}-index-queue"
+  tenx_retriever_query_queue_name    = "${var.resource_prefix}-query-queue"
+  tenx_retriever_subquery_queue_name = "${var.resource_prefix}-subquery-queue"
+  tenx_retriever_stream_queue_name   = "${var.resource_prefix}-stream-queue"
 
-  tenx_streamer_create_index_source_bucket  = true
-  tenx_streamer_index_source_bucket_name    = "${var.resource_prefix}-logs"
-  tenx_streamer_create_index_results_bucket = true
-  tenx_streamer_index_results_bucket_name   = "${var.resource_prefix}-index"
-  tenx_streamer_index_results_path          = "indexed/"
+  tenx_retriever_create_index_source_bucket  = true
+  tenx_retriever_index_source_bucket_name    = "${var.resource_prefix}-logs"
+  tenx_retriever_create_index_results_bucket = true
+  tenx_retriever_index_results_bucket_name   = "${var.resource_prefix}-index"
+  tenx_retriever_index_results_path          = "indexed/"
 
-  tenx_streamer_index_trigger_prefix = ""
-  tenx_streamer_index_trigger_suffix = ".log"
+  tenx_retriever_index_trigger_prefix = ""
+  tenx_retriever_index_trigger_suffix = ".log"
 
   # CloudWatch Logs for query event logging
-  tenx_streamer_query_log_group_name      = "/tenx/${var.resource_prefix}/query"
-  tenx_streamer_query_log_group_retention = 1
+  tenx_retriever_query_log_group_name      = "/tenx/${var.resource_prefix}/query"
+  tenx_retriever_query_log_group_retention = 1
 }
 
 ###########################################
 # Kubernetes Resources
 ###########################################
 
-resource "kubernetes_namespace_v1" "streamer" {
+resource "kubernetes_namespace_v1" "retriever" {
   metadata {
     name = var.namespace
   }
@@ -137,11 +137,11 @@ resource "kubernetes_namespace_v1" "streamer" {
 # Helm Release
 ###########################################
 
-resource "helm_release" "streamer" {
-  name       = "streamer"
+resource "helm_release" "retriever" {
+  name       = "retriever"
   repository = "https://log-10x.github.io/helm-charts"
-  chart      = "streamer-10x"
-  namespace  = kubernetes_namespace_v1.streamer.metadata[0].name
+  chart      = "retriever-10x"
+  namespace  = kubernetes_namespace_v1.retriever.metadata[0].name
 
   wait    = true
   timeout = 300
@@ -149,15 +149,15 @@ resource "helm_release" "streamer" {
   values = [yamlencode({
     log10xApiKey = var.tenx_api_key
 
-    inputBucket = module.streamer_infra.index_source_bucket_name
-    indexBucket = module.streamer_infra.index_write_container
+    inputBucket = module.retriever_infra.index_source_bucket_name
+    indexBucket = module.retriever_infra.index_write_container
 
-    indexQueueUrl    = module.streamer_infra.index_queue_url
-    queryQueueUrl    = module.streamer_infra.query_queue_url
-    subQueryQueueUrl = module.streamer_infra.subquery_queue_url
-    streamQueueUrl   = module.streamer_infra.stream_queue_url
+    indexQueueUrl    = module.retriever_infra.index_queue_url
+    queryQueueUrl    = module.retriever_infra.query_queue_url
+    subQueryQueueUrl = module.retriever_infra.subquery_queue_url
+    streamQueueUrl   = module.retriever_infra.stream_queue_url
 
-    queryLogGroup = module.streamer_infra.query_log_group_name
+    queryLogGroup = module.retriever_infra.query_log_group_name
 
     clusters = [merge(
       {
@@ -207,7 +207,7 @@ resource "helm_release" "streamer" {
     defaultIngress   = { enabled = false }
   })]
 
-  depends_on = [module.streamer_infra]
+  depends_on = [module.retriever_infra]
 }
 
 ###########################################
@@ -215,17 +215,17 @@ resource "helm_release" "streamer" {
 ###########################################
 
 output "namespace" {
-  value = kubernetes_namespace_v1.streamer.metadata[0].name
+  value = kubernetes_namespace_v1.retriever.metadata[0].name
 }
 
 output "input_bucket" {
-  value = module.streamer_infra.index_source_bucket_name
+  value = module.retriever_infra.index_source_bucket_name
 }
 
 output "index_bucket" {
-  value = module.streamer_infra.index_write_container
+  value = module.retriever_infra.index_write_container
 }
 
 output "port_forward_command" {
-  value = "kubectl port-forward -n ${var.namespace} svc/streamer-streamer-10x-all-in-one 8080:80"
+  value = "kubectl port-forward -n ${var.namespace} svc/retriever-retriever-10x-all-in-one 8080:80"
 }

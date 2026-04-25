@@ -41,7 +41,7 @@ This example demonstrates a production-ready deployment with:
 ```hcl
 eks_cluster_name     = "production-eks-cluster"
 tenx_api_key         = "your-api-key-here"
-namespace            = "tenx-streamer"
+namespace            = "tenx-retriever"
 source_bucket_name   = "prod-logs-source"
 results_bucket_name  = "prod-logs-indexed"
 ```
@@ -94,4 +94,4 @@ autoscaling:
   targetCPUUtilizationPercentage: 75
 ```
 
-See the [streamer-10x chart documentation](https://github.com/log-10x/helm-charts/tree/main/charts/streamer) for all available configuration options.
+See the [retriever-10x chart documentation](https://github.com/log-10x/helm-charts/tree/main/charts/retriever) for all available configuration options.

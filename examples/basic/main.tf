@@ -35,7 +35,7 @@ provider "helm" {
   }
 }
 
-module "tenx_streamer" {
+module "tenx_retriever" {
   source = "../../"
 
   # Required: API key
@@ -52,13 +52,13 @@ module "tenx_streamer" {
   helm_values_file = "${path.module}/values.yaml"
 
   # CloudWatch Logs for query event logging
-  tenx_streamer_query_log_group_name      = "/tenx/dev/streamer/query"
-  tenx_streamer_query_log_group_retention = 1
+  tenx_retriever_query_log_group_name      = "/tenx/dev/retriever/query"
+  tenx_retriever_query_log_group_retention = 1
 
   # Tags
   tags = {
     Environment = "development"
-    Project     = "log10x-streamer"
+    Project     = "log10x-retriever"
     Example     = "basic"
   }
 }

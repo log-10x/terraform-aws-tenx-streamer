@@ -1,15 +1,15 @@
-# terraform-aws-tenx-streamer
+# terraform-aws-tenx-retriever
 
-Terraform module that deploys the Log10x streamer application to Kubernetes with complete AWS integration.
+Terraform module that deploys the Log10x retriever application to Kubernetes with complete AWS integration.
 
 ## Overview
 
-This module provides a complete deployment of the Log10x streamer, including:
+This module provides a complete deployment of the Log10x retriever, including:
 
-- **Infrastructure Provisioning**: Automatically creates SQS queues and S3 buckets using the `terraform-aws-tenx-streamer-infra` module
+- **Infrastructure Provisioning**: Automatically creates SQS queues and S3 buckets using the `terraform-aws-tenx-retriever-infra` module
 - **IRSA Configuration**: Sets up IAM Roles for Service Accounts for secure, credential-free AWS access
 - **Kubernetes Resources**: Creates namespaces and service accounts with proper annotations
-- **Helm Deployment**: Deploys the `streamer-10x` Helm chart with all necessary configuration
+- **Helm Deployment**: Deploys the `retriever-10x` Helm chart with all necessary configuration
 - **CloudWatch Logs**: Optionally creates a log group for query event logging with automatic IAM permissions
 
 **Version 0.4.0+**: This module now uses explicit provider passing for better control and flexibility. See [Migration Guide](#migration-from-03x-to-04x) if upgrading from v0.3.x.
@@ -33,7 +33,7 @@ Parent Terraform Module
             │       │
             │       └─> Service Account (with IRSA annotation)
             │               │
-            │               └─> Streamer Pods
+            │               └─> Retriever Pods
             │                       │
             │                       ├─> S3 Buckets (source + index)
             │                       └─> SQS Queues (index + query + subquery + stream)
@@ -43,7 +43,7 @@ Parent Terraform Module
 
 1. **Kubernetes Cluster** with:
    - Kubernetes version 1.21+
-   - Sufficient capacity for streamer pods
+   - Sufficient capacity for retriever pods
    - For EKS: OIDC provider configured (standard for EKS clusters)
 
 2. **Terraform Providers Configured** in your parent module:
@@ -87,9 +87,9 @@ provider "helm" {
   }
 }
 
-# Deploy streamer module
-module "tenx_streamer" {
-  source  = "log-10x/tenx-streamer/aws"
+# Deploy retriever module
+module "tenx_retriever" {
+  source  = "log-10x/tenx-retriever/aws"
   version = "~> 0.4"
 
   # Required: API key
@@ -106,13 +106,13 @@ module "tenx_streamer" {
 }
 ```
 
-This will create all infrastructure (SQS queues and S3 buckets) and deploy the streamer to the `default` namespace with default settings.
+This will create all infrastructure (SQS queues and S3 buckets) and deploy the retriever to the `default` namespace with default settings.
 
 ### Production Usage with Custom Configuration
 
 ```hcl
-module "tenx_streamer" {
-  source  = "log-10x/tenx-streamer/aws"
+module "tenx_retriever" {
+  source  = "log-10x/tenx-retriever/aws"
   version = "~> 0.4"
 
   # Required
@@ -124,24 +124,24 @@ module "tenx_streamer" {
   resource_prefix = "production-cluster"
 
   # Kubernetes configuration
-  namespace        = "log10x-streamer"
+  namespace        = "log10x-retriever"
   create_namespace = true
 
   # Infrastructure naming (optional - uses resource_prefix if not specified)
-  tenx_streamer_index_source_bucket_name  = "my-logs-bucket"
-  tenx_streamer_index_results_bucket_name = "my-index-bucket"
-  tenx_streamer_index_queue_name          = "prod-index-queue"
-  tenx_streamer_query_queue_name          = "prod-query-queue"
-  tenx_streamer_subquery_queue_name       = "prod-subquery-queue"
-  tenx_streamer_stream_queue_name         = "prod-stream-queue"
+  tenx_retriever_index_source_bucket_name  = "my-logs-bucket"
+  tenx_retriever_index_results_bucket_name = "my-index-bucket"
+  tenx_retriever_index_queue_name          = "prod-index-queue"
+  tenx_retriever_query_queue_name          = "prod-query-queue"
+  tenx_retriever_subquery_queue_name       = "prod-subquery-queue"
+  tenx_retriever_stream_queue_name         = "prod-stream-queue"
 
   # CloudWatch Logs for query event logging (optional)
-  tenx_streamer_query_log_group_name      = "/tenx/prod/streamer/query"
-  tenx_streamer_query_log_group_retention = 14
+  tenx_retriever_query_log_group_name      = "/tenx/prod/retriever/query"
+  tenx_retriever_query_log_group_retention = 14
 
   # Helm configuration
   helm_chart_version = "0.9.4"
-  helm_values_file   = "streamer-values.yaml"
+  helm_values_file   = "retriever-values.yaml"
 
   # Tagging
   tags = {
@@ -180,7 +180,7 @@ The module creates an IAM role with least-privilege permissions based on actual 
 - `sqs:SendMessage` - Send messages (for pipeline invocation)
 - `sqs:GetQueueAttributes` - Get queue metadata
 
-**CloudWatch Logs (Conditional - only when `tenx_streamer_query_log_group_name` is set)**:
+**CloudWatch Logs (Conditional - only when `tenx_retriever_query_log_group_name` is set)**:
 - `logs:CreateLogStream` - Create log streams for each query/worker
 - `logs:PutLogEvents` - Write query progress and diagnostic events
 - `logs:DescribeLogStreams` - List existing log streams
@@ -199,18 +199,18 @@ The module creates an IAM role with least-privilege permissions based on actual 
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `resource_prefix` | Prefix for generated resource names. Recommended to use cluster name. | `string` | `"tenx-streamer"` |
-| `tenx_streamer_index_source_bucket_name` | S3 bucket for source files. Auto-generated if empty. | `string` | `""` |
-| `tenx_streamer_index_results_bucket_name` | S3 bucket for index results. Uses source bucket if empty. | `string` | `""` |
-| `tenx_streamer_index_queue_name` | Index SQS queue name. Auto-generated if empty. | `string` | `""` |
-| `tenx_streamer_query_queue_name` | Query SQS queue name. Auto-generated if empty. | `string` | `""` |
-| `tenx_streamer_subquery_queue_name` | Sub-query SQS queue name. Auto-generated if empty. | `string` | `""` |
-| `tenx_streamer_stream_queue_name` | Stream SQS queue name. Auto-generated if empty. | `string` | `""` |
+| `resource_prefix` | Prefix for generated resource names. Recommended to use cluster name. | `string` | `"tenx-retriever"` |
+| `tenx_retriever_index_source_bucket_name` | S3 bucket for source files. Auto-generated if empty. | `string` | `""` |
+| `tenx_retriever_index_results_bucket_name` | S3 bucket for index results. Uses source bucket if empty. | `string` | `""` |
+| `tenx_retriever_index_queue_name` | Index SQS queue name. Auto-generated if empty. | `string` | `""` |
+| `tenx_retriever_query_queue_name` | Query SQS queue name. Auto-generated if empty. | `string` | `""` |
+| `tenx_retriever_subquery_queue_name` | Sub-query SQS queue name. Auto-generated if empty. | `string` | `""` |
+| `tenx_retriever_stream_queue_name` | Stream SQS queue name. Auto-generated if empty. | `string` | `""` |
 | `create_s3_buckets` | Whether to create S3 buckets or use existing ones | `bool` | `true` |
-| `tenx_streamer_queue_message_retention` | SQS message retention period in seconds | `number` | `345600` (4 days) |
-| `tenx_streamer_index_trigger_suffix` | S3 suffix that triggers indexing (e.g., '.log') | `string` | `""` (all objects) |
-| `tenx_streamer_query_log_group_name` | CloudWatch Logs log group for query event logging. If empty, disabled. | `string` | `""` |
-| `tenx_streamer_query_log_group_retention` | Days to retain query event logs in CloudWatch Logs | `number` | `7` |
+| `tenx_retriever_queue_message_retention` | SQS message retention period in seconds | `number` | `345600` (4 days) |
+| `tenx_retriever_index_trigger_suffix` | S3 suffix that triggers indexing (e.g., '.log') | `string` | `""` (all objects) |
+| `tenx_retriever_query_log_group_name` | CloudWatch Logs log group for query event logging. If empty, disabled. | `string` | `""` |
+| `tenx_retriever_query_log_group_retention` | Days to retain query event logs in CloudWatch Logs | `number` | `7` |
 
 ### Kubernetes Configuration
 
@@ -224,8 +224,8 @@ The module creates an IAM role with least-privilege permissions based on actual 
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| `helm_release_name` | Helm release name | `string` | `"tenx-streamer"` |
-| `helm_chart_version` | Version of the streamer-10x Helm chart | `string` | `"0.4.0"` |
+| `helm_release_name` | Helm release name | `string` | `"tenx-retriever"` |
+| `helm_chart_version` | Version of the retriever-10x Helm chart | `string` | `"0.4.0"` |
 | `helm_values_file` | Path to custom Helm values YAML file | `string` | `""` |
 | `helm_values` | Additional Helm values as a map | `any` | `{}` |
 
@@ -276,7 +276,7 @@ The module creates an IAM role with least-privilege permissions based on actual 
 
 ### Kubernetes Outputs
 
-- `namespace` - Kubernetes namespace where streamer is deployed
+- `namespace` - Kubernetes namespace where retriever is deployed
 - `service_account_name` - Name of the Kubernetes service account
 
 ### Helm Outputs
@@ -292,8 +292,8 @@ The module creates an IAM role with least-privilege permissions based on actual 
 If you already have SQS queues and S3 buckets:
 
 ```hcl
-module "tenx_streamer" {
-  source  = "log-10x/tenx-streamer/aws"
+module "tenx_retriever" {
+  source  = "log-10x/tenx-retriever/aws"
   version = "~> 0.4"
 
   tenx_api_key      = var.tenx_api_key
@@ -302,12 +302,12 @@ module "tenx_streamer" {
 
   # Use existing infrastructure
   create_s3_buckets                        = false
-  tenx_streamer_index_source_bucket_name   = "existing-logs-bucket"
-  tenx_streamer_index_results_bucket_name  = "existing-index-bucket"
-  tenx_streamer_index_queue_name           = "existing-index-queue"
-  tenx_streamer_query_queue_name           = "existing-query-queue"
-  tenx_streamer_subquery_queue_name        = "existing-subquery-queue"
-  tenx_streamer_stream_queue_name          = "existing-stream-queue"
+  tenx_retriever_index_source_bucket_name   = "existing-logs-bucket"
+  tenx_retriever_index_results_bucket_name  = "existing-index-bucket"
+  tenx_retriever_index_queue_name           = "existing-index-queue"
+  tenx_retriever_query_queue_name           = "existing-query-queue"
+  tenx_retriever_subquery_queue_name        = "existing-subquery-queue"
+  tenx_retriever_stream_queue_name          = "existing-stream-queue"
 }
 ```
 
@@ -316,8 +316,8 @@ module "tenx_streamer" {
 If your application needs additional AWS permissions:
 
 ```hcl
-module "tenx_streamer" {
-  source  = "log-10x/tenx-streamer/aws"
+module "tenx_retriever" {
+  source  = "log-10x/tenx-retriever/aws"
   version = "~> 0.4"
 
   tenx_api_key      = var.tenx_api_key
@@ -340,15 +340,15 @@ module "tenx_streamer" {
 Use a custom values file for Helm configuration:
 
 ```hcl
-module "tenx_streamer" {
-  source  = "log-10x/tenx-streamer/aws"
+module "tenx_retriever" {
+  source  = "log-10x/tenx-retriever/aws"
   version = "~> 0.4"
 
   tenx_api_key      = var.tenx_api_key
   oidc_provider_arn = var.oidc_provider_arn
   oidc_provider     = var.oidc_provider
 
-  helm_values_file = "${path.module}/custom-streamer-values.yaml"
+  helm_values_file = "${path.module}/custom-retriever-values.yaml"
 }
 ```
 
@@ -396,10 +396,10 @@ kubectl auth can-i create deployments -n <namespace>
 # Test Helm chart locally
 helm repo add log-10x https://log-10x.github.io/helm-charts
 helm repo update
-helm search repo log-10x/streamer-10x --versions
+helm search repo log-10x/retriever-10x --versions
 
 # Validate custom values file
-helm template test log-10x/streamer-10x -f <your-values-file>
+helm template test log-10x/retriever-10x -f <your-values-file>
 ```
 
 ### Resource Name Conflicts
@@ -413,16 +413,16 @@ helm template test log-10x/streamer-10x -f <your-values-file>
 **Solutions**:
 ```hcl
 # Use unique resource names per deployment
-module "tenx_streamer" {
+module "tenx_retriever" {
   source = "..."
 
-  helm_release_name                      = "tenx-streamer-prod"
-  iam_role_name                          = "prod-tenx-streamer-irsa"
-  service_account_name                   = "tenx-streamer-prod"
-  tenx_streamer_index_queue_name         = "prod-index-queue"
-  tenx_streamer_query_queue_name         = "prod-query-queue"
-  tenx_streamer_subquery_queue_name      = "prod-subquery-queue"
-  tenx_streamer_stream_queue_name        = "prod-stream-queue"
+  helm_release_name                      = "tenx-retriever-prod"
+  iam_role_name                          = "prod-tenx-retriever-irsa"
+  service_account_name                   = "tenx-retriever-prod"
+  tenx_retriever_index_queue_name         = "prod-index-queue"
+  tenx_retriever_query_queue_name         = "prod-query-queue"
+  tenx_retriever_subquery_queue_name      = "prod-subquery-queue"
+  tenx_retriever_stream_queue_name        = "prod-stream-queue"
 }
 ```
 
@@ -471,17 +471,17 @@ See the [examples/](examples/) directory for complete working examples:
 
 | Name | Source | Version |
 |------|--------|---------|
-| tenx_streamer_infra | log-10x/tenx-streamer-infra/aws | ~> 0.3 |
+| tenx_retriever_infra | log-10x/tenx-retriever-infra/aws | ~> 0.3 |
 
 ## Resources
 
 | Name | Type |
 |------|------|
-| aws_iam_role.tenx_streamer | resource |
-| aws_iam_role_policy.tenx_streamer | resource |
-| kubernetes_namespace.tenx_streamer | resource |
-| kubernetes_service_account.tenx_streamer | resource |
-| helm_release.tenx_streamer | resource |
+| aws_iam_role.tenx_retriever | resource |
+| aws_iam_role_policy.tenx_retriever | resource |
+| kubernetes_namespace.tenx_retriever | resource |
+| kubernetes_service_account.tenx_retriever | resource |
+| helm_release.tenx_retriever | resource |
 | aws_region.current | data source |
 | aws_caller_identity.current | data source |
 
@@ -501,8 +501,8 @@ Version 0.4.0 introduces **breaking changes** to improve module design and follo
 
 **Before (v0.3.x):**
 ```hcl
-module "tenx_streamer" {
-  source  = "log-10x/tenx-streamer/aws"
+module "tenx_retriever" {
+  source  = "log-10x/tenx-retriever/aws"
   version = "~> 0.3"
 
   eks_cluster_name = "my-cluster"
@@ -517,8 +517,8 @@ data "aws_eks_cluster" "main" {
   name = "my-cluster"
 }
 
-module "tenx_streamer" {
-  source  = "log-10x/tenx-streamer/aws"
+module "tenx_retriever" {
+  source  = "log-10x/tenx-retriever/aws"
   version = "~> 0.4"
 
   # Required: API key (unchanged)
@@ -547,7 +547,7 @@ This repository is licensed under the [Apache License 2.0](LICENSE).
 
 ### Important: Log10x Product License Required
 
-This repository contains deployment tooling for Log10x Streamer. While the Terraform module
+This repository contains deployment tooling for Log10x Retriever. While the Terraform module
 itself is open source, **using Log10x requires a commercial license**.
 
 | Component | License |
@@ -568,5 +568,5 @@ itself is open source, **using Log10x requires a commercial license**.
 ## Support
 
 For issues and questions:
-- GitHub Issues: https://github.com/log-10x/terraform-aws-tenx-streamer/issues
+- GitHub Issues: https://github.com/log-10x/terraform-aws-tenx-retriever/issues
 - Documentation: https://docs.log10x.com
