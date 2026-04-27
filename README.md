@@ -1,4 +1,29 @@
-# terraform-aws-tenx-streamer
+# terraform-aws-tenx-streamer — DEPRECATED
+
+> ## ⚠️ This module has been renamed and is no longer maintained
+>
+> The Log10x **streamer** product has been renamed to **retriever**. This repository is archived as a tombstone.
+>
+> **New canonical module:** [`log-10x/tenx-retriever/aws`](https://registry.terraform.io/modules/log-10x/tenx-retriever/aws/latest)
+> **New source repository:** https://github.com/log-10x/terraform-aws-tenx-retriever
+>
+> ### Migration
+>
+> Replace your `source` line and rename the variables:
+>
+> ```hcl
+> module "tenx_retriever" {
+> -  source  = "log-10x/tenx-streamer/aws"
+> +  source  = "log-10x/tenx-retriever/aws"
+>   version = ">= 0.9.0"
+>   # variables: tenx_streamer_* → tenx_retriever_*
+>   # helm chart name: streamer-10x → retriever-10x
+> }
+> ```
+>
+> Existing pins to `log-10x/tenx-streamer/aws` versions `<= 0.7.0` continue to resolve from the registry, but no new versions will be published under the streamer name. Migrate to retriever for any new features or fixes.
+
+---
 
 Terraform module that deploys the Log10x streamer application to Kubernetes with complete AWS integration.
 

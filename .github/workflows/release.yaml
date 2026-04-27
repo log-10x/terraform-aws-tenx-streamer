@@ -1,9 +1,9 @@
 name: Release Terraform Module
 
 on:
-  push:
-    branches:
-      - main
+  # Auto-release on push to main disabled — repo is archived/tombstoned.
+  # Module is replaced by log-10x/tenx-retriever/aws.
+  workflow_dispatch:
 
 jobs:
   release:
